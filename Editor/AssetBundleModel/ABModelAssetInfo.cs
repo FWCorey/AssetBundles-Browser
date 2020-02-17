@@ -6,6 +6,13 @@ using UnityEditor.IMGUI.Controls;
 
 namespace AssetBundleBrowser.AssetBundleModel
 {
+
+    using System;
+
+    using UnityEngine.Profiling;
+
+    using Random = UnityEngine.Random;
+
     internal sealed class AssetTreeItem : TreeViewItem
     {
         private AssetInfo m_asset;
@@ -78,6 +85,7 @@ namespace AssetBundleBrowser.AssetBundleModel
         private string m_AssetName;
         private string m_DisplayName;
         private string m_BundleName;
+        private string m_AssetType;
         private MessageSystem.MessageState m_AssetMessages = new MessageSystem.MessageState();
 
         internal AssetInfo(string inName, string bundleName="")
@@ -94,23 +102,44 @@ namespace AssetBundleBrowser.AssetBundleModel
             get { return m_AssetName; }
             set
             {
-                m_AssetName = value;
+                m_AssetName = value ?? string.Empty;
+                if(string.IsNullOrEmpty(m_AssetName)){ return; }
+                
                 m_DisplayName = System.IO.Path.GetFileNameWithoutExtension(m_AssetName);
 
                 //TODO - maybe there's a way to ask the AssetDatabase for this size info.
                 System.IO.FileInfo fileInfo = new System.IO.FileInfo(m_AssetName);
-                if (fileInfo.Exists)
+                
+                if (fileInfo.Exists) {
                     fileSize = fileInfo.Length;
-                else
+                    var type = AssetDatabase.GetMainAssetTypeAtPath(m_AssetName);
+
+                    if (type == typeof(GameObject)) {
+                        var prefabType = PrefabUtility.GetPrefabAssetType(AssetDatabase.LoadAssetAtPath<GameObject>(m_AssetName));
+                        m_AssetType = prefabType.ToString();
+                    } else {
+                        m_AssetType = type?.Name ?? fileInfo.Extension;
+                        if (type == typeof(Texture2D)) {
+                            var runtimeSize = Profiler.GetRuntimeMemorySizeLong(AssetDatabase.LoadAssetAtPath<Texture2D>(m_AssetName));
+                            fileSize = runtimeSize > 0 ? runtimeSize : fileSize;
+                        }
+                    }
+                    
+                } else {
+                    m_AssetType = "";
                     fileSize = 0;
+                }
             }
         }
+        
         internal string displayName
         {
             get { return m_DisplayName; }
         }
         internal string bundleName
         { get { return System.String.IsNullOrEmpty(m_BundleName) ? "auto" : m_BundleName; } }
+        
+        public string assetType => m_AssetType;
         
         internal Color GetColor()
         {
