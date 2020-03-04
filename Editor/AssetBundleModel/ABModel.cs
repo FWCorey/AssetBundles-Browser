@@ -72,7 +72,6 @@ namespace AssetBundleBrowser.AssetBundleModel
             ExecuteAssetMove(false);     //this should never do anything. just a safety check.
 
             //TODO - look into EditorApplication callback functions.
-            
             int size = s_BundlesToUpdate.Count;
             if (size > 0)
             {
